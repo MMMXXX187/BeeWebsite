@@ -1,150 +1,282 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { beeQuizData } from '../data/knowledge';
 
-function InsectCard({ insect, onSelect, revealed, isCorrect }) {
-  const borderColor = !revealed ? 'transparent' : isCorrect ? '#66BB6A' : '#EF5350';
-  const bgColor = !revealed ? 'transparent' : isCorrect ? 'rgba(102, 187, 106, 0.08)' : 'rgba(239, 83, 80, 0.08)';
+const images = import.meta.glob('../assets/bees/*.png', { eager: true, import: 'default' });
 
-  return (
-    <motion.button
-      className="card"
-      style={{ padding: 24, textAlign: 'left', cursor: 'pointer', borderColor, background: bgColor || undefined }}
-      onClick={() => !revealed && onSelect(insect)}
-      whileHover={!revealed ? { scale: 1.03, y: -4 } : {}}
-      whileTap={!revealed ? { scale: 0.97 } : {}}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-    >
-      {!revealed && (
-        <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(245,166,35,0.04), transparent)', opacity: 0, transition: 'opacity 0.3s', borderRadius: 16 }} />
-      )}
-      <div style={{ position: 'relative', zIndex: 10 }}>
-        <div style={{ fontSize: '2.8rem', marginBottom: 16 }}>{insect.emoji}</div>
-        <h4 className="body-lg" style={{ fontWeight: 700, marginBottom: 4 }}>{insect.name}</h4>
-        <p className="mono-sm" style={{ fontStyle: 'italic', marginBottom: 12 }}>{insect.latin}</p>
-        <p className="body-md text-dim mb-4" style={{ lineHeight: 1.6 }}>{insect.features}</p>
-
-        {revealed && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-            <div className={`result-badge ${isCorrect ? 'correct' : 'incorrect'}`}>
-              {isCorrect ? '✓ CORRECT' : '✗ INCORRECT'}
-            </div>
-            <p className="body-md mt-5" style={{ lineHeight: 1.7 }}>{insect.detail}</p>
-          </motion.div>
-        )}
-
-        {!revealed && (
-          <div className="label-sm text-honey mt-3" style={{ opacity: 0, transition: 'opacity 0.3s' }}>JUDGE →</div>
-        )}
-      </div>
-    </motion.button>
-  );
+function getImage(filename) {
+  const key = `../assets/bees/${filename}`;
+  return images[key] || null;
 }
 
 export default function BeeQuizGame({ onBack }) {
-  const [selections, setSelections] = useState({});
-  const [score, setScore] = useState(null);
-  const [showResult, setShowResult] = useState(false);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [answers, setAnswers] = useState({}); // { id: { choice: bool, correct: bool } }
+  const [direction, setDirection] = useState(0);
 
-  const handleSelect = useCallback((insect) => {
-    setSelections((prev) => ({ ...prev, [insect.id]: insect.isBee }));
-  }, []);
+  const items = beeQuizData;
+  const total = items.length;
+  const item = items[currentIndex];
+  const currentAnswer = answers[item.id]; // undefined | { choice, correct }
+  const isJudged = currentAnswer !== undefined;
+  const allDone = Object.keys(answers).length === total;
 
-  const handleSubmit = () => {
-    let correct = 0;
-    beeQuizData.forEach((insect) => { if (selections[insect.id] === insect.isBee) correct++; });
-    setScore(correct);
-    setShowResult(true);
+  const judge = useCallback((choice) => {
+    if (answers[item.id] !== undefined) return; // already judged
+    const correct = choice === item.isBee;
+    setAnswers((prev) => ({ ...prev, [item.id]: { choice, correct } }));
+  }, [item, answers]);
+
+  const goNext = useCallback(() => {
+    if (currentIndex < total - 1) {
+      setDirection(1);
+      setTimeout(() => setCurrentIndex((i) => i + 1), 50);
+    }
+  }, [currentIndex, total]);
+
+  const goPrev = useCallback(() => {
+    if (currentIndex > 0) {
+      setDirection(-1);
+      setTimeout(() => setCurrentIndex((i) => i - 1), 50);
+    }
+  }, [currentIndex]);
+
+  useEffect(() => {
+    const handleKey = (e) => {
+      if (!isJudged) {
+        if (e.key === '1' || e.key === 'y') judge(true);
+        if (e.key === '2' || e.key === 'n') judge(false);
+      } else {
+        if (e.key === 'ArrowRight' || e.key === 'Enter') goNext();
+        if (e.key === 'ArrowLeft') goPrev();
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [isJudged, judge, goNext, goPrev]);
+
+  const correctCount = Object.values(answers).filter((a) => a.correct).length;
+
+  const handleReset = () => {
+    setAnswers({});
+    setCurrentIndex(0);
+    setDirection(0);
   };
 
-  const handleReset = () => { setSelections({}); setScore(null); setShowResult(false); };
+  const slideVariants = {
+    enter: (dir) => ({ x: dir > 0 ? 300 : -300, opacity: 0, scale: 0.92 }),
+    center: { x: 0, opacity: 1, scale: 1 },
+    exit: (dir) => ({ x: dir > 0 ? -300 : 300, opacity: 0, scale: 0.92 }),
+  };
 
-  const allSelected = Object.keys(selections).length === beeQuizData.length;
+  const imgSrc = getImage(item.image);
 
   return (
     <motion.div className="page" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.5 }}>
-      <div className="container-wide">
-        <motion.button className="btn-ghost mb-8" onClick={onBack} whileHover={{ x: -4 }}>
-          <span style={{ fontSize: '1.2rem' }}>←</span>
-          <span>RETURN</span>
-        </motion.button>
-
-        <motion.div className="text-center mb-10" initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }}>
-          <p className="label text-honey mb-3">◈ SPECIES IDENTIFICATION CHALLENGE ◈</p>
-          <h1 className="title-xl">真假蜜蜂鉴定器</h1>
-          <p className="body-lg text-dim mt-3">哪些是真正的蜜蜂属（Apis）？根据膝状触角、花粉篮、复眼结构来判断</p>
+      <div className="container-narrow grow flex-col">
+        {/* Top bar */}
+        <motion.div className="flex-between mb-8" initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+          <button className="btn-ghost" onClick={onBack}>
+            <span style={{ fontSize: '1.2rem' }}>←</span>
+            <span>RETURN</span>
+          </button>
+          <div className="flex gap-3" style={{ alignItems: 'center' }}>
+            <span style={{ fontSize: '1.8rem' }}>🔍</span>
+            <div style={{ textAlign: 'right' }}>
+              <p className="label-sm text-honey">SPECIES IDENTIFIER</p>
+              <p className="body-md" style={{ fontWeight: 500 }}>真假蜜蜂鉴定器</p>
+            </div>
+          </div>
         </motion.div>
 
-        <motion.div className="glass mx-auto mb-8" style={{ padding: '14px 28px', maxWidth: 500, borderRadius: 999, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
-          initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.3 }}>
-          <span className="mono">IDENTIFIED: <span className="text-honey" style={{ fontWeight: 600 }}>{Object.keys(selections).length}</span> / {beeQuizData.length}</span>
-          {showResult && score !== null && (
-            <span className="mono">SCORE: <span style={{ fontWeight: 600, color: score >= 6 ? 'var(--success)' : 'var(--danger)' }}>{score}</span> / {beeQuizData.length}</span>
-          )}
+        {/* Progress */}
+        <motion.div className="mb-8" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
+          <div className="flex-between mb-3">
+            <span className="mono">SPECIMEN {String(currentIndex + 1).padStart(2, '0')} / {String(total).padStart(2, '0')}</span>
+            <span className="mono">
+              {allDone
+                ? <span style={{ color: correctCount >= 7 ? 'var(--success)' : 'var(--honey)', fontWeight: 600 }}>{correctCount} / {total} CORRECT</span>
+                : `${Object.keys(answers).length} / ${total} JUDGED`
+              }
+            </span>
+          </div>
+          <div className="progress-track">
+            <motion.div
+              className="progress-fill"
+              style={{ background: 'var(--honey)' }}
+              animate={{ width: `${(Object.keys(answers).length / total) * 100}%` }}
+              transition={{ duration: 0.4, ease: 'easeOut' }}
+            />
+          </div>
         </motion.div>
 
-        <motion.div className="glass mx-auto mb-10" style={{ padding: 24, maxWidth: 700, borderRadius: 16, textAlign: 'center' }}
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.35 }}>
-          <p className="body-md text-dim">
-            <span className="text-honey" style={{ fontWeight: 700 }}>点击卡片</span> 选择你认为是 <span className="text-success" style={{ fontWeight: 700 }}>真正的蜜蜂</span> 的昆虫，再次点击取消选择。选完后提交答案。
-          </p>
-        </motion.div>
+        {/* Card area */}
+        <div className="grow flex-center" style={{ padding: '16px 0' }}>
+          <div className="w-full">
+            <AnimatePresence mode="wait" custom={direction}>
+              <motion.div
+                key={currentIndex}
+                custom={direction}
+                variants={slideVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
+                className="w-full"
+              >
+                <div className="glass" style={{ borderRadius: 20, overflow: 'hidden' }}>
+                  {/* Image */}
+                  <div style={{ position: 'relative', width: '100%', height: 400, background: '#0D1117', overflow: 'hidden' }}>
+                    {imgSrc ? (
+                      <img src={imgSrc} alt={isJudged ? item.name : '未知昆虫'} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                    ) : (
+                      <div className="flex-center" style={{ width: '100%', height: '100%', fontSize: '4rem' }}>🐝</div>
+                    )}
 
-        <div className="grid-4">
-          {beeQuizData.map((insect, i) => (
-            <motion.div key={insect.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 * i + 0.4 }}
-              className={selections[insect.id] === true ? 'ring-selected' : ''}>
-              <InsectCard insect={insect} onSelect={handleSelect} revealed={showResult}
-                isCorrect={showResult ? selections[insect.id] === insect.isBee : undefined} />
-            </motion.div>
-          ))}
+                    {/* Number badge */}
+                    <div style={{
+                      position: 'absolute', top: 16, left: 16,
+                      padding: '6px 14px', borderRadius: 8,
+                      background: 'rgba(10, 12, 16, 0.7)', backdropFilter: 'blur(10px)',
+                      border: '1px solid var(--glass-border)',
+                      fontFamily: 'var(--font-display)', fontSize: '0.8rem', fontWeight: 600,
+                      color: 'var(--honey)', letterSpacing: '0.1em',
+                    }}>
+                      #{String(currentIndex + 1).padStart(2, '0')}
+                    </div>
+
+                    {/* Result overlay */}
+                    {isJudged && (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.4 }}
+                        style={{
+                          position: 'absolute', inset: 0,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          background: currentAnswer.correct ? 'rgba(102, 187, 106, 0.12)' : 'rgba(239, 83, 80, 0.12)',
+                        }}
+                      >
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ type: 'spring', stiffness: 200, delay: 0.15 }}
+                          style={{
+                            padding: '14px 32px', borderRadius: 12,
+                            fontFamily: 'var(--font-display)', fontSize: '1.2rem', fontWeight: 700,
+                            letterSpacing: '0.1em',
+                            background: currentAnswer.correct ? 'rgba(102, 187, 106, 0.9)' : 'rgba(239, 83, 80, 0.9)',
+                            color: '#fff',
+                            boxShadow: currentAnswer.correct
+                              ? '0 0 30px rgba(102, 187, 106, 0.4)'
+                              : '0 0 30px rgba(239, 83, 80, 0.4)',
+                          }}
+                        >
+                          {currentAnswer.correct ? '✓ CORRECT' : '✗ WRONG'}
+                        </motion.div>
+                      </motion.div>
+                    )}
+                  </div>
+
+                  {/* Content area */}
+                  <div style={{ padding: '28px 32px 32px' }}>
+                    {/* Before judging: only show hint */}
+                    {!isJudged && (
+                      <>
+                        <p className="body-lg text-dim text-center mb-6" style={{ lineHeight: 1.8 }}>
+                          观察图片中的昆虫，判断它是否是真正的蜜蜂属（Apis）
+                        </p>
+                        <div className="flex gap-4">
+                          <button className="btn" style={{ flex: 1, justifyContent: 'center', padding: '18px 20px', fontSize: '1rem' }} onClick={() => judge(true)}>
+                            🐝 真蜜蜂
+                          </button>
+                          <button className="btn" style={{ flex: 1, justifyContent: 'center', padding: '18px 20px', fontSize: '1rem' }} onClick={() => judge(false)}>
+                            🪰 不是蜜蜂
+                          </button>
+                        </div>
+                        <p className="mono-sm text-center mt-5" style={{ opacity: 0.4 }}>Y = 真蜜蜂 · N = 不是蜜蜂</p>
+                      </>
+                    )}
+
+                    {/* After judging: show all info */}
+                    {isJudged && (
+                      <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.4 }}>
+                        <h3 className="title-lg mb-1">{item.name}</h3>
+                        <p className="mono-sm mb-3" style={{ fontStyle: 'italic' }}>{item.latin}</p>
+                        <p className="body-md text-dim mb-5">{item.features}</p>
+
+                        <div style={{
+                          padding: '18px 22px', borderRadius: 12,
+                          background: currentAnswer.correct ? 'rgba(102, 187, 106, 0.06)' : 'rgba(239, 83, 80, 0.06)',
+                          border: `1px solid ${currentAnswer.correct ? 'rgba(102, 187, 106, 0.2)' : 'rgba(239, 83, 80, 0.2)'}`,
+                        }}>
+                          <p className="body-md" style={{ lineHeight: 1.8 }}>{item.detail}</p>
+                        </div>
+
+                        {!allDone && currentIndex < total - 1 && (
+                          <div className="flex-center mt-6">
+                            <button className="btn" onClick={goNext} style={{ padding: '14px 32px' }}>
+                              下一题 →
+                            </button>
+                          </div>
+                        )}
+                      </motion.div>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            </AnimatePresence>
+          </div>
         </div>
 
-        <motion.div className="flex-center mt-10" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }}>
-          {!showResult ? (
-            <button className={`btn ${!allSelected ? 'disabled' : ''}`} onClick={allSelected ? handleSubmit : undefined} disabled={!allSelected}>
-              SUBMIT ANSWERS
-            </button>
-          ) : (
-            <button className="btn" onClick={handleReset}>TRY AGAIN</button>
-          )}
+        {/* Navigation dots */}
+        <motion.div className="flex-center pb-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
+          <div className="dots">
+            {items.map((it, i) => {
+              const ans = answers[it.id];
+              let dotColor;
+              if (ans) dotColor = ans.correct ? 'var(--success)' : 'var(--danger)';
+              return (
+                <button
+                  key={it.id}
+                  className={`dot ${i === currentIndex ? 'active' : ''}`}
+                  style={{
+                    background: i === currentIndex ? (dotColor || 'var(--honey)') : dotColor,
+                    boxShadow: i === currentIndex ? `0 0 8px ${dotColor || 'var(--honey)'}40` : undefined,
+                  }}
+                  onClick={() => {
+                    setDirection(i > currentIndex ? 1 : -1);
+                    setTimeout(() => setCurrentIndex(i), 50);
+                  }}
+                />
+              );
+            })}
+          </div>
         </motion.div>
 
-        <AnimatePresence>
-          {showResult && score !== null && (
-            <motion.div className="glass-strong mx-auto mt-10 text-center" style={{ padding: 40, maxWidth: 500 }}
-              initial={{ opacity: 0, scale: 0.8, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.8 }} transition={{ type: 'spring', stiffness: 150 }}>
-              <motion.div className="inline-block mb-5" style={{ fontSize: '3.5rem' }}
-                initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.2, type: 'spring' }}>
-                {score >= 7 ? '🏆' : score >= 5 ? '🐝' : '🔬'}
-              </motion.div>
-              <h3 className="title-md mb-3" style={{ color: score >= 6 ? 'var(--success)' : 'var(--honey)' }}>
-                {score >= 7 ? 'BEE EXPERT!' : score >= 5 ? 'GOOD JOB!' : 'KEEP LEARNING!'}
-              </h3>
+        {/* Bottom: final result or reset */}
+        {allDone && (
+          <motion.div
+            className="text-center pb-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <div className="glass-strong mx-auto" style={{ padding: '28px 36px', maxWidth: 420, borderRadius: 16, marginBottom: 20 }}>
+              <p style={{ fontSize: '2.5rem', marginBottom: 8 }}>{correctCount >= 8 ? '🏆' : correctCount >= 6 ? '🐝' : '🔬'}</p>
+              <p className="title-md" style={{ color: correctCount >= 7 ? 'var(--success)' : 'var(--honey)', marginBottom: 8 }}>
+                {correctCount >= 8 ? 'BEE EXPERT!' : correctCount >= 6 ? 'GOOD JOB!' : 'KEEP LEARNING!'}
+              </p>
               <p className="body-md text-dim" style={{ lineHeight: 1.7 }}>
-                {score >= 7
+                {correctCount >= 8
                   ? '你已经掌握了蜜蜂鉴定的关键特征！'
-                  : score >= 5
+                  : correctCount >= 6
                   ? '不错的尝试！记住：膝状触角、花粉篮、复眼结构是鉴定蜜蜂的关键。'
                   : '继续学习！真正的蜜蜂属于蜜蜂属（Apis），拥有膝状触角和花粉篮。'}
               </p>
-              <div className="data-line mx-auto mt-5" style={{ width: 100 }} />
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <motion.div className="glass mx-auto mt-10" style={{ padding: 32, maxWidth: 800, borderRadius: 16 }}
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }}>
-          <h4 className="label-sm text-honey mb-4">◈ IDENTIFICATION KEY ◈</h4>
-          <div className="grid-2">
-            <div className="info-box"><span className="info-bullet">•</span><span><strong>膝状触角</strong> — 真正的蜜蜂触角呈膝状弯曲</span></div>
-            <div className="info-box"><span className="info-bullet">•</span><span><strong>花粉篮</strong> — 后足特化用于携带花粉</span></div>
-            <div className="info-box"><span className="info-bullet">•</span><span><strong>复眼结构</strong> — 大型复眼感知紫外线</span></div>
-            <div className="info-box"><span className="info-bullet">•</span><span><strong>背板颜色</strong> — 黄黑相间的条纹模式</span></div>
-          </div>
-        </motion.div>
+            </div>
+            <button className="btn" onClick={handleReset}>TRY AGAIN</button>
+          </motion.div>
+        )}
       </div>
     </motion.div>
   );

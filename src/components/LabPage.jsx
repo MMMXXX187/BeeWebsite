@@ -75,7 +75,7 @@ export default function LabPage({ onBack, onStartVision, onStartQuiz }) {
           </motion.span>
           <p className="label text-danger mb-3">◈ EXPERIENCE AS A BEE ◈</p>
           <h1 className="title-xl mb-4">互动实验室</h1>
-          <p className="body-lg text-dim">亲自体验"成为蜜蜂" — 选择一个实验开始</p>
+          <p className="body-lg text-dim">体验"成为蜜蜂" —— 选择一个实验开始</p>
           <div className="data-line mx-auto mt-8" style={{ width: 160 }} />
         </motion.div>
 

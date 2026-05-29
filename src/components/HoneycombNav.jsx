@@ -44,10 +44,10 @@ export default function HoneycombNav({ onNavigate }) {
           ◈ 蜜蜂 · 生态 · 人类 ◈
         </p>
 
-        <h1 className="title-hero mb-4">THE WORLD THROUGH BEE EYES</h1>
+        <h1 className="title-hero mb-4"> Discover the Wonders of Bees</h1>
 
         <h2 className="subtitle mb-3" style={{ fontFamily: "'Noto Sans SC', sans-serif" }}>
-          蜜蜂眼中的世界
+          走进蜜蜂的奇妙天地
         </h2>
 
         <div className="data-line mx-auto mt-8" style={{ width: 220 }} />

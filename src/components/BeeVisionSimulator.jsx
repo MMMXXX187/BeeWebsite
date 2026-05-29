@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import humanEye from '../assets/human_eye.jpg';
-import beeEye from '../assets/bee_eye.png';
+import humanEye from '../assets/people.jpg';
+import beeEye from '../assets/bee_sight.jpg';
 
 export default function BeeVisionSimulator({ onBack }) {
   const [isBeeMode, setIsBeeMode] = useState(false);

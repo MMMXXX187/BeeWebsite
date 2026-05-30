@@ -35,7 +35,7 @@ export default function LoadingScreen() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
       >
-        BEE DATABASE
+        Discover the Wonders of Bees
       </motion.h1>
 
       <motion.p
@@ -45,7 +45,7 @@ export default function LoadingScreen() {
         animate={{ opacity: 1 }}
         transition={{ delay: 0.6 }}
       >
-        蜜蜂眼中的世界
+        走进蜜蜂的奇妙天地
       </motion.p>
 
       <motion.div style={{ width: 220, height: 3, background: 'var(--border)', borderRadius: 999, overflow: 'hidden' }}>

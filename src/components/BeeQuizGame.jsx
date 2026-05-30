@@ -2,11 +2,21 @@ import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { beeQuizData } from '../data/knowledge';
 
-const images = import.meta.glob('../assets/bees/*.png', { eager: true, import: 'default' });
+const R2_BASE = 'https://pub-f49117188c264b3ab3f0ebf703c9eb51.r2.dev';
+const beeImages = [
+  '1_意大利蜂.png',
+  '2_不是蜜蜂.png',
+  '3_小蜜蜂.png',
+  '4_不是蜜蜂1.png',
+  '5_大蜜蜂.png',
+  '6_壁蜂.png',
+  '7_黑大蜜蜂.png',
+  '8_沙巴蜂.png',
+  '9_中华蜜蜂.png',
+];
 
 function getImage(filename) {
-  const key = `../assets/bees/${filename}`;
-  return images[key] || null;
+  return `${R2_BASE}/${encodeURIComponent(filename)}`;
 }
 
 export default function BeeQuizGame({ onBack }) {

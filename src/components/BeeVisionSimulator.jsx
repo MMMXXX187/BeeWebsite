@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import humanEye from '../assets/people.jpg';
-import beeEye from '../assets/bee_sight.jpg';
 
 export default function BeeVisionSimulator({ onBack }) {
   const [isBeeMode, setIsBeeMode] = useState(false);
+  const beeEye = "https://pub-f49117188c264b3ab3f0ebf703c9eb51.r2.dev/bee_sight.jpg";
+  const humanEye = "https://pub-f49117188c264b3ab3f0ebf703c9eb51.r2.dev/people.jpg";
 
   return (
     <motion.div className="page" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.5 }}>
